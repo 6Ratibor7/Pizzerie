@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RACIBORSKIE PIZZERIE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
+    <style>
+        /* --- NOWOCZESNE TŁO BOKEH --- */
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            overflow-x: hidden;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .bokeh-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #1a1a1a, #050505);
+            overflow: hidden;
+        }
+
+        .bokeh-light {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: moveBokeh infinite ease-in-out;
+        }
+
+        .bokeh-1 { width: 400px; height: 400px; background: #f5b942; top: -100px; left: -100px; animation-duration: 25s; }
+        .bokeh-2 { width: 500px; height: 500px; background: #ff4500; bottom: -150px; right: -100px; animation-duration: 35s; animation-delay: -5s; }
+        .bokeh-3 { width: 300px; height: 300px; background: #f5b942; top: 40%; left: 60%; animation-duration: 30s; animation-delay: -10s; }
+
+        @keyframes moveBokeh {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(100px, 50px) scale(1.2); }
+            66% { transform: translate(-50px, 100px) scale(0.8); }
+        }
+
+        /* --- STYLIZACJA ELEMENTÓW --- */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        header { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 60px 0 30px 0;
+        }
+
+        .logo { display: flex; align-items: center; gap: 10px; color: white; text-decoration: none; cursor: pointer; }
+        .logo-icon { color: #f5b942; font-size: 2.5rem; }
+        .logo-text { font-family: 'Poppins', sans-serif; line-height: 1.1; }
+        .logo-text span { color: #f5b942; font-size: 1.8rem; font-weight: 700; }
+
+        .hero { display: flex; align-items: center; justify-content: space-between; padding: 60px 0; transition: 0.4s; }
+        .hero-text h1 { color: white; font-family: 'Poppins', sans-serif; font-size: 3.5rem; line-height: 1.2; margin-bottom: 20px; }
+        
+        .btn-gold { 
+            background: #f5b942; 
+            color: #000; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 5px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-block;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+        .btn-gold:hover { background: #fff; transform: translateY(-2px); }
+
+        .hero-pizza { width: 450px; filter: drop-shadow(0 0 30px rgba(245, 185, 66, 0.3)); }
+
+        .content-grid { display: grid; grid-template-columns: 1fr 350px; gap: 40px; }
+        .section-title { font-family: 'Poppins', sans-serif; color: #f5b942; margin-bottom: 20px; }
+
+        .pizzerias-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .pizzeria-card { background: rgba(255, 255, 255, 0.05); border-radius: 12px; overflow: hidden; cursor: pointer; transition: 0.3s; border: 1px solid transparent; }
+        .pizzeria-card:hover { transform: translateY(-5px); border-color: #f5b942; background: rgba(255, 255, 255, 0.1); }
+        .card-img { width: 100%; height: 150px; object-fit: cover; }
+        .card-info { padding: 15px; color: white; }
+        .card-info h4 { margin: 0; font-size: 1.1rem; }
+        .rating-small { color: #f5b942; font-size: 0.8rem; margin-top: 5px; }
+        .address { color: #888; font-size: 0.85rem; margin-top: 5px; }
+
+        .map-wrapper { display: flex; height: 450px; background: rgba(20, 20, 20, 0.8); border-radius: 12px; overflow: hidden; border: 1px solid #f5b942; backdrop-filter: blur(10px); }
+        #mapMenu { width: 140px; background: rgba(26, 26, 26, 0.9); display: flex; flex-direction: column; overflow-y: auto; border-right: 1px solid #333; }
+        #mapMenu button { background: transparent; border: none; color: #aaa; padding: 12px 8px; text-align: left; cursor: pointer; border-bottom: 1px solid #222; font-family: 'Poppins', sans-serif; transition: 0.3s; }
+        #mapMenu button:hover { background: #f5b942; color: #000; }
+        #floatingMap { flex-grow: 1; z-index: 1; }
+
+        .hidden { display: none !important; }
+        .fade-out-up { animation: fadeOutUp 0.4s forwards ease-in-out; }
+        .fade-in-up { animation: fadeInUp 0.4s forwards ease-in-out; }
+
+        @keyframes fadeOutUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-40px); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+
+        #details-view { background: rgba(26, 26, 26, 0.95); border: 1px solid #f5b942; border-radius: 12px; padding: 30px; color: white; min-height: 500px; backdrop-filter: blur(15px); }
+        .back-btn { background: #f5b942; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 25px; display: inline-flex; align-items: center; gap: 10px; }
+        
+        .details-info { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .details-img { width: 100%; border-radius: 10px; border: 2px solid #333; height: 350px; object-fit: cover; }
+        .hours-list { list-style: none; padding: 0; margin-top: 10px; }
+        .hours-list li { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; color: #ccc; }
+        .hours-list li strong { color: #f5b942; }
+        .rating-badge { background: rgba(245, 185, 66, 0.2); padding: 10px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f5b942; }
+
+        @media (max-width: 992px) { .content-grid { grid-template-columns: 1fr; } .hero { flex-direction: column; text-align: center; } .hero-pizza { width: 320px; margin-top: 20px; } }
+        @media (max-width: 768px) { .details-info { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="bokeh-bg">
+        <div class="bokeh-light bokeh-1"></div>
+        <div class="bokeh-light bokeh-2"></div>
+        <div class="bokeh-light bokeh-3"></div>
+    </div>
+
+    <header class="container">
+        <div class="logo" onclick="hideDetails()">
+            <i class="fas fa-pizza-slice logo-icon"></i>
+            <div class="logo-text"><span>Racibórz</span><br>Pizzerie</div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero" id="hero-section">
+            <div class="hero-text">
+                <h1>Racibórz.<br>Przewodnik Po Pizzeriach</h1>
+                <button class="btn-gold">autorstwo: WK. KZ. ŁM.</button>
+            </div>
+            <img src="img/pizza_hero.png" alt="Pizza" class="hero-pizza">
+        </section>
+        
+        <section class="content-grid">
+            <div class="pizzerias-module">
+                <h3 class="section-title">-PIZZERIE-</h3>
+                
+                <div class="pizzerias-list" id="main-list">
+                    <div class="pizzeria-card" onclick="showDetails('Emilia Romagna')">
+                        <img src="img/emilia.jpg" class="card-img">
+                        <div class="card-info">
+                            <h4>Emilia Romagna</h4>
+                            <div class="rating-small"><i class="fas fa-star"></i> 4.7 (730 opinii)</div>
+                            <p class="address">plac Wolności 5</p>
+                        </div>
+                    </div>
+                    <div class="pizzeria-card" onclick="showDetails('Da Grasso')">
+                        <img src="img/dagrasso.jpg" class="card-img">
+                        <div class="card-info">
+                            <h4>Da Grasso</h4>
+                            <div class="rating-small"><i class="fas fa-star"></i> 4.2 (1.2k opinii)</div>
+                            <p class="address">ul. Adama Mickiewicza 3</p>
+                        </div>
+                    </div>
+                    <div class="pizzeria-card" onclick="showDetails('Restauracja RO-MA')">
+                        <img src="img/roma.jpg" class="card-img">
+                        <div class="card-info">
+                            <h4>Restauracja RO-MA</h4>
+                            <div class="rating-small"><i class="fas fa-star"></i> 4.5 (510 opinii)</div>
+                            <p class="address">Rynek 4</p>
+                        </div>
+                    </div>
+                    <div class="pizzeria-card" onclick="showDetails('Restauracja Młyn')">
+                        <img src="img/mlyn.jpg" class="card-img">
+                        <div class="card-info">
+                            <h4>Restauracja Młyn</h4>
+                            <div class="rating-small"><i class="fas fa-star"></i> 4.6 (920 opinii)</div>
+                            <p class="address">ul. Ks. Londzina 21</p>
+                        </div>
+                    </div>
+                    <div class="pizzeria-card" onclick="showDetails('Casagrande')">
+                        <img src="img/casa.jpg" class="card-img">
+                        <div class="card-info">
+                            <h4>Casagrande</h4>
+                            <div class="rating-small"><i class="fas fa-star"></i> 4.4 (440 opinii)</div>
+                            <p class="address">ul. Browarna 4/6/9</p>
+                        </div>
+                    </div>
+                    <div class="pizzeria-card" onclick="showDetails('Tele Placek')">
+                        <img src="img/teleplacek.jpg" class="card-img">
+                        <div class="card-info">
+                            <h4>Tele Placek</h4>
+                            <div class="rating-small"><i class="fas fa-star"></i> 4.3 (315 opinii)</div>
+                            <p class="address">ul. Warszawska 13</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="details-view" class="hidden">
+                    <button class="back-btn" onclick="hideDetails()">
+                        <i class="fas fa-arrow-left"></i> WRÓĆ DO LISTY
+                    </button>
+                    <div class="details-content" id="details-data"></div>
+                </div>
+            </div>
+            
+            <div class="map-module">
+                <h3 class="section-title">LOKALIZACJA</h3>
+                <div class="map-wrapper">
+                    <div id="mapMenu"></div>
+                    <div id="floatingMap"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const pizzeriaData = {
+            "Emilia Romagna": { 
+                img: "img/emilia.jpg", 
+                desc: "Prawdziwa perła na mapie Raciborza. Pizza wypiekana jest tutaj w tradycyjnym piecu opalanym drewnem, co nadaje jej niepowtarzalny aromat. Składniki są sprowadzane bezpośrednio z Włoch, a ciasto dojrzewa przez wiele godzin, aby zapewnić lekkość i chrupkość.", 
+                rating: "4.7", reviews: "732",
+                hours: {"Pn": "12:00-21:00", "Wt": "12:00-21:00", "Śr": "12:00-21:00", "Cz": "12:00-21:00", "Pt": "12:00-21:00", "Sb": "12:17-21:00", "Nd": "15:00-21:00"}, 
+                lat: 50.09416, lon: 18.21462, 
+                link: "https://www.pizzeria-emilia.pl/" 
+            },
+            "Da Grasso": { 
+                img: "img/dagrasso.jpg", 
+                desc: "Pizzeria znana z doskonałego stosunku jakości do ceny. Oferuje szeroki wybór kompozycji, od klasyków po autorskie smaki. Kultowe sosy (czosnkowy i pomidorowy) to znak rozpoznawczy tego lokalu.", 
+                rating: "4.2", reviews: "1245",
+                hours: {"Pn": "12:00-21:00", "Wt": "12:00-21:00", "Śr": "12:00-21:00", "Cz": "12:00-21:00", "Pt": "12:00-22:00", "Sb": "12:00-22:00", "Nd": "13:00-20:00"}, 
+                lat: 50.09092, lon: 18.22139, 
+                link: "https://www.dagrasso.pl/raciborz" 
+            },
+            "Restauracja RO-MA": { 
+                img: "img/roma.jpg", 
+                desc: "Położona w samym sercu raciborskiego rynku, łączy w sobie tradycję z przytulnym, rodzinnym klimatem. Pizza przygotowywana jest według sprawdzonych receptur, które od lat przyciągają stałych mieszkańców.", 
+                rating: "4.5", reviews: "512",
+                hours: {"Pn": "10:00-22:00", "Wt": "10:00-22:00", "Śr": "10:00-22:00", "Cz": "10:00-22:00", "Pt": "10:00-22:00", "Sb": "10:00-22:00", "Nd": "12:00-22:00"}, 
+                lat: 50.09179, lon: 18.22019, 
+                link: "https://www.pizza-raciborz.pl/restauracja/smaki-swiata" 
+            },
+            "Restauracja Młyn": { 
+                img: "img/mlyn.jpg", 
+                desc: "Wyjątkowy lokal usytuowany w odrestaurowanym, zabytkowym młynie. Kuchnia stawia na wysoką jakość produktów i elegancki sposób podania. Pizza w Młynie to połączenie rzemieślniczego podejścia i luksusowej oprawy.", 
+                rating: "4.6", reviews: "928",
+                hours: {"Pn": "08:00-22:00", "Wt": "08:00-22:00", "Śr": "08:00-22:00", "Cz": "08:00-22:00", "Pt": "08:00-23:00", "Sb": "12:00-23:00", "Nd": "12:00-22:00"}, 
+                lat: 50.09555, lon: 18.21323, 
+                link: "https://mlyn-raciborz.pl/" 
+            },
+            "Casagrande": { 
+                img: "img/casa.jpg", 
+                desc: "Nowoczesne podejście do włoskiej klasyki. Casagrande to miejsce, gdzie dbałość o świeżość warzyw i aromat ziół widać w każdym kęsie. Ich pizza wyróżnia się puszystym brzegiem i harmonijnie dobranymi dodatkami.", 
+                rating: "4.4", reviews: "441",
+                hours: {"Pn": "12:00-21:30", "Wt": "12:00-21:30", "Śr": "12:00-21:30", "Cz": "12:00-21:30", "Pt": "12:00-22:00", "Sb": "12:00-22:00", "Nd": "12:00-20:00"}, 
+                lat: 50.09180, lon: 18.21846, 
+                link: "https://www.facebook.com/p/CASAGRANDE-100043117665922/?locale=pl_PL" 
+            },
+            "Tele Placek": { 
+                img: "img/teleplacek.jpg", 
+                desc: "Bezapelacyjny król dostaw na terenie całego miasta. Tele Placek stawia na solidne, polskie porcje, które nasycą nawet największy głód. Szybkość obsługi i gorąca pizza dowożona pod same drzwi to ich największe atuty.", 
+                rating: "4.3", reviews: "318",
+                hours: {"Pn": "Zamknięte", "Wt": "11:30-22:00", "Śr": "11:30-22:00", "Cz": "11:30-22:00", "Pt": "11:30-22:30", "Sb": "11:30-22:30", "Nd": "11:30-22:00"}, 
+                lat: 50.08434, lon: 18.20873, 
+                link: "https://www.teleplacek.pl/" 
+            }
+        };
+
+        const map = L.map('floatingMap').setView([50.091, 18.218], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        const pizzaIcon = L.divIcon({ html: '<i class="fas fa-pizza-slice" style="color:#f5b942;font-size:18px;"></i>', iconSize: [26, 26], className: '' });
+
+        Object.keys(pizzeriaData).forEach(name => {
+            const p = pizzeriaData[name];
+            const marker = L.marker([p.lat, p.lon], { icon: pizzaIcon }).addTo(map).bindPopup(`<strong>${name}</strong>`);
+            const btn = document.createElement("button");
+            btn.textContent = name;
+            btn.onclick = () => { map.setView([p.lat, p.lon], 17); marker.openPopup(); };
+            document.getElementById("mapMenu").appendChild(btn);
+        });
+
+        function showDetails(name) {
+            const mainList = document.getElementById('main-list');
+            const hero = document.getElementById('hero-section');
+            const data = pizzeriaData[name];
+
+            mainList.classList.add('fade-out-up');
+            hero.classList.add('fade-out-up');
+
+            setTimeout(() => {
+                mainList.classList.add('hidden');
+                hero.classList.add('hidden');
+                
+                let hoursHtml = '<ul class="hours-list">';
+                for (const [day, time] of Object.entries(data.hours)) {
+                    hoursHtml += `<li><strong>${day}</strong> <span>${time}</span></li>`;
+                }
+                hoursHtml += '</ul>';
+
+                document.getElementById('details-data').innerHTML = `
+                    <h2 style="color: #f5b942; font-size: 2.5rem; margin-bottom: 5px;">${name}</h2>
+                    <div class="rating-badge">
+                        <i class="fas fa-star" style="color: #f5b942;"></i> 
+                        <strong>Ocena: ${data.rating}/5</strong> — na podstawie ${data.reviews} opinii klientów
+                    </div>
+                    <div class="details-info">
+                        <img src="${data.img}" class="details-img">
+                        <div class="details-text">
+                            <p><strong>O pizzerii:</strong> ${data.desc}</p>
+                            <p style="margin-top:15px; border-bottom: 1px solid #444; padding-bottom: 5px;"><strong><i class="far fa-clock"></i> Godziny otwarcia:</strong></p>
+                            ${hoursHtml}
+                            <a href="${data.link}" target="_blank" class="btn-gold" style="margin-top:25px; width: 100%; text-align: center;">
+                                <i class="fas fa-external-link-alt"></i> STRONA PIZZERII
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('details-view').classList.remove('hidden', 'fade-out-up');
+                document.getElementById('details-view').classList.add('fade-in-up');
+                map.setView([data.lat, data.lon], 17);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 400);
+        }
+
+        function hideDetails() {
+            document.getElementById('details-view').classList.add('fade-out-up');
+            setTimeout(() => {
+                document.getElementById('details-view').classList.add('hidden');
+                document.getElementById('main-list').classList.remove('hidden', 'fade-out-up');
+                document.getElementById('hero-section').classList.remove('hidden', 'fade-out-up');
+                document.getElementById('main-list').classList.add('fade-in-up');
+                document.getElementById('hero-section').classList.add('fade-in-up');
+                map.setView([50.091, 18.218], 14);
+            }, 400);
+        }
+    </script>
+</body>
+</html>
